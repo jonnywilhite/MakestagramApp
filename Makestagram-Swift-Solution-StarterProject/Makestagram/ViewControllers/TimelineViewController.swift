@@ -69,12 +69,14 @@ extension TimelineViewController: UITableViewDataSource {
         return posts.count
     }
     
+    //This func gets called right before a cell gets displayed!!
     func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCellWithIdentifier("PostCell") as! PostTableViewCell
         let post = posts[indexPath.row]
         
         //Trigger download directly before post is displayed
         post.downloadImage()
+        post.fetchLikes()
         
         cell.post = post
         return cell

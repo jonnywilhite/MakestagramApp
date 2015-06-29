@@ -19,6 +19,9 @@ class Post: PFObject, PFSubclassing {
     var image : Dynamic<UIImage?> = Dynamic(nil)
     var photoUploadTask : UIBackgroundTaskIdentifier?
     
+    //likes is an array of Users. Could be empty hence the optional
+    var likes = Dynamic<[PFUser]?>(nil)
+    
     //MARK: Subclassing Protocol
     
     static func parseClassName() -> String {
@@ -72,6 +75,56 @@ class Post: PFObject, PFSubclassing {
                     self.image.value = image
                 }
             }
+        }
+    }
+    
+    func fetchLikes() {
+        
+        //If likes already has a value stored, skip method
+        if likes.value != nil {
+            return
+        }
+        
+        //Fetch likes
+        ParseHelper.likesForPost(self, completionBlock: { (var likes: [AnyObject]?, error: NSError?) -> Void in
+            
+            //filter takes in a closure, returns subset of array s.t. all elements meet requirement in closure
+            //closure gets called for each element in array, passing current element each time
+            //We filter because we remove likes from users that no longer exist
+            likes = likes?.filter { like in like[ParseHelper.ParseLikeFromUser] != nil }
+            
+            //like filter, map takes in closure that gets called for each element in array
+            //map replaces likes in the array with users associated with said like
+            self.likes.value = likes?.map { like in
+                let like = like as! PFObject
+                let fromUser = like[ParseHelper.ParseLikeFromUser] as! PFUser
+                
+                return fromUser
+            }
+        })
+    }
+    
+    func doesUserLikePost(user: PFUser) -> Bool {
+        if let likes = likes.value {
+            return contains(likes, user)
+        } else {
+            return false
+        }
+    }
+    
+    func toggleLikePost(user: PFUser) {
+        if (doesUserLikePost(user)) {
+            //if user does like Post, unlike it
+            
+            //remove user from local cache stored in Likes property
+            likes.value = likes.value?.filter { $0 != user }
+            ParseHelper.unlikePost(user, post: self)
+        } else {
+            //else like the post
+            
+            //add user to local cache stored in Likes property
+            likes.value?.append(user)
+            ParseHelper.likePost(user, post: self)
         }
     }
 }
