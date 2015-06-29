@@ -18,6 +18,35 @@ class PostTableViewCell: UITableViewCell {
     @IBOutlet weak var likeButton: UIButton!
     @IBOutlet weak var moreButton: UIButton!
     
+    //This array represents list of users who have liked a certain post
+    var likeBond : Bond<[PFUser]?>!
+    
+    required init(coder aDecoder: NSCoder) {
+        super.init(coder: aDecoder)
+        
+        //This closure runs whenever the Bond receives a new value. unowned self is a capture list that is needed to avoid retain cycles
+        likeBond = Bond<[PFUser]?>() { [unowned self] likeList in
+            
+            //If likeList is not nil, change UI
+            if let likeList = likeList {
+                
+                //UILabel!.text is used to change the text of a label... obviously
+                self.likesLabel.text = self.stringFromUserList(likeList)
+                
+                //UIButton! has a selected property than can be toggled with true/false
+                self.likeButton.selected = contains(likeList, PFUser.currentUser()!)
+                
+                self.likesIconImageView.hidden = (likeList.count == 0)
+                
+            } else {
+                
+                self.likesLabel.text = ""
+                self.likeButton.selected = false
+                self.likesIconImageView.hidden = true
+            }
+        }
+    }
+    
     @IBAction func moreButtonTapped(sender: AnyObject) {
         
     }
@@ -31,8 +60,17 @@ class PostTableViewCell: UITableViewCell {
             if let post = post {
                 //bind the image of the post to 'postImage' view
                 post.image ->> postImageView
+                post.likes ->> likeBond
             }
         }
+    }
+    
+    func stringFromUserList(userList: [PFUser]) -> String {
+        let usernameList = userList.map { user in user.username! }
+        
+        let commaSeparatedUserList = ", ".join(usernameList)
+        
+        return commaSeparatedUserList
     }
     
     override func awakeFromNib() {
