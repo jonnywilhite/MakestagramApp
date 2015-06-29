@@ -146,6 +146,7 @@
                                 </prototypes>
                                 <connections>
                                     <outlet property="dataSource" destination="Dxi-H1-PHi" id="sTx-g4-yeZ"/>
+                                    <outlet property="delegate" destination="Dxi-H1-PHi" id="aLc-VE-OSh"/>
                                 </connections>
                             </tableView>
                         </subviews>

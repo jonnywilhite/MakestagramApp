@@ -35,7 +35,8 @@ class ParseHelper {
     static let ParseUserUsername        = "username"
     
     //static means we can call it without having to create instance of ParseHelper. Do this for all helper fxns!!
-    static func timelineRequestForCurrentUser(completionBlock: PFArrayResultBlock) {
+    //Range defines which portions of timeline get loaded
+    static func timelineRequestForCurrentUser(range: Range<Int>, completionBlock: PFArrayResultBlock) {
         let followingQuery = PFQuery(className: ParseFollowClass)
         followingQuery.whereKey(ParseLikeFromUser, equalTo: PFUser.currentUser()!)
         
@@ -48,6 +49,10 @@ class ParseHelper {
         let query = PFQuery.orQueryWithSubqueries([postsFromFollowedUsers!, postsFromThisUser!])
         query.includeKey(ParsePostUser)
         query.orderByDescending(ParsePostCreatedAt)
+        
+        //Skipping posts that have already been loaded
+        query.skip = range.startIndex
+        query.limit = range.endIndex - range.startIndex
         
         query.findObjectsInBackgroundWithBlock(completionBlock)
     }
@@ -94,5 +99,7 @@ extension PFObject: Equatable {
 }
 
 public func ==(lhs: PFObject, rhs: PFObject) -> Bool {
+    
+    //This line is necessary in order to ensure that users aren't cloned (different objects with same ID)
     return lhs.objectId == rhs.objectId
 }

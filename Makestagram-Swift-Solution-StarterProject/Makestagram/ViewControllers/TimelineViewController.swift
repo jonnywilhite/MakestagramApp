@@ -8,29 +8,38 @@
 
 import UIKit
 import Parse
+import ConvenienceKit
 
-class TimelineViewController: UIViewController {
+class TimelineViewController: UIViewController, TimelineComponentTarget {
    
     @IBOutlet weak var tableView: UITableView!
     
     var photoTakingHelper: PhotoTakingHelper?
-    var posts : [Post] = []
+    
+    let defaultRange = 0...4
+    let additionalRangeSize = 5
+    
+    //Provide Type you are displaying AND the class that will be the target of TimelineComponent in < >
+    var timelineComponent : TimelineComponent<Post,TimelineViewController>!
+    
+    func loadInRange(range: Range<Int>, completionBlock: ([Post]?) -> Void) {
+        ParseHelper.timelineRequestForCurrentUser(range) { (result: [AnyObject]?, error: NSError?) -> Void in
+            let posts = result as? [Post] ?? []
+            completionBlock(posts)
+        }
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
-
+        timelineComponent = TimelineComponent(target: self)
         self.tabBarController?.delegate = self
     }
-    
+    //Called as soon as TableView becomes available
     override func viewDidAppear(animated: Bool) {
         super.viewDidAppear(animated)
         
-        ParseHelper.timelineRequestForCurrentUser { (result: [AnyObject]?, error: NSError?) -> Void in
-            self.posts = result as? [Post] ?? []
-            
-            self.tableView.reloadData()
-        
-        }
+        //This method only gets called if table view is becoming visible for the first time
+        timelineComponent.loadInitialIfRequired()
     }
     
     func takePhoto() {
@@ -66,13 +75,13 @@ extension TimelineViewController: UITabBarControllerDelegate {
 
 extension TimelineViewController: UITableViewDataSource {
     func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return posts.count
+        return timelineComponent.content.count
     }
     
     //This func gets called right before a cell gets displayed!!
     func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCellWithIdentifier("PostCell") as! PostTableViewCell
-        let post = posts[indexPath.row]
+        let post = timelineComponent.content[indexPath.row]
         
         //Trigger download directly before post is displayed
         post.downloadImage()
@@ -80,5 +89,13 @@ extension TimelineViewController: UITableViewDataSource {
         
         cell.post = post
         return cell
+    }
+}
+
+//Directly call TimelineComponent and inform it that a cell has been displayed
+extension TimelineViewController: UITableViewDelegate {
+    //This method gets called whenever we are about to display a cell
+    func tableView(tableView: UITableView, willDisplayCell cell: UITableViewCell, forRowAtIndexPath indexPath: NSIndexPath) {
+        timelineComponent.targetWillDisplayEntry(indexPath.row)
     }
 }
