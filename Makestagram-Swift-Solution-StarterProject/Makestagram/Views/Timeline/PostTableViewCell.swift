@@ -57,6 +57,21 @@ class PostTableViewCell: UITableViewCell {
     
     var post: Post? {
         didSet {
+            //free memory of image no longer displayed
+            //oldValue is available automatically in didSet. Allows us to access previous value
+            if let oldValue = oldValue where oldValue != post {
+                
+                //When you have binding code, you should have code that unbinds when no longer needed
+                //These two lines destroy the bonds created in the next if-statement
+                likeBond.unbindAll()
+                postImageView.designatedBond.unbindAll()
+                
+                //Only free up memory if image has no bonds remaining
+                if (oldValue.image.bonds.count == 0) {
+                    oldValue.image.value = nil
+                }
+            }
+            
             if let post = post {
                 //bind the image of the post to 'postImage' view
                 post.image ->> postImageView

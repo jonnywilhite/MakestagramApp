@@ -64,7 +64,7 @@ class ParseHelper {
         newLike[ParseLikeFromUser] = user
         newLike[ParseLikeToPost] = post
         
-        newLike.saveInBackgroundWithBlock(nil)
+        newLike.saveInBackgroundWithBlock(ErrorHandling.errorHandlingCallback)
     }
     
     static func unlikePost(user: PFUser, post: Post) {
@@ -73,9 +73,15 @@ class ParseHelper {
         newQuery.whereKey(ParseLikeToPost, equalTo: post)
         
         newQuery.findObjectsInBackgroundWithBlock { (results: [AnyObject]?, error: NSError?) -> Void in
+            if let error = error {
+                ErrorHandling.defaultErrorHandler(error)
+            }
+            
             if let results = results as? [PFObject] {
                 for likes in results {
-                    likes.deleteInBackgroundWithBlock(nil)
+                    //Passing nil because we don't want to do any code after we perform background deletion
+                    //Now we are passing an error handling callback so we can be informed of any errors
+                    likes.deleteInBackgroundWithBlock(ErrorHandling.errorHandlingCallback)
                 }
             }
         }
@@ -109,7 +115,7 @@ class ParseHelper {
         followObject.setObject(user, forKey: ParseFollowFromUser)
         followObject.setObject(toUser, forKey: ParseFollowToUser)
         
-        followObject.saveInBackgroundWithBlock(nil)
+        followObject.saveInBackgroundWithBlock(ErrorHandling.errorHandlingCallback)
     }
     
     static func removeFollowRelationshipFromUser(user: PFUser, toUser: PFUser) {
@@ -122,7 +128,7 @@ class ParseHelper {
             let results = results as? [PFObject] ?? []
             
             for follow in results {
-                follow.deleteInBackgroundWithBlock(nil)
+                follow.deleteInBackgroundWithBlock(ErrorHandling.errorHandlingCallback)
             }
         }
     }

@@ -9,6 +9,7 @@
 import Foundation
 import Parse
 import Bond
+import ConvenienceKit
 
 class Post: PFObject, PFSubclassing {
     
@@ -18,6 +19,9 @@ class Post: PFObject, PFSubclassing {
     //Dynamic allows us to listen to changes for wrapped value
     var image : Dynamic<UIImage?> = Dynamic(nil)
     var photoUploadTask : UIBackgroundTaskIdentifier?
+    
+    //Static variable because we want singular cache to be accessible from all Post objects
+    static var imageCache : NSCacheSwift<String, UIImage>!
     
     //likes is an array of Users. Could be empty hence the optional
     var likes = Dynamic<[PFUser]?>(nil)
@@ -35,8 +39,11 @@ class Post: PFObject, PFSubclassing {
     override class func initialize() {
         var onceToken : dispatch_once_t = 0;
         dispatch_once(&onceToken) {
-            //Inform Parse about this subclass
+            //Inform Parse about this subclass (everything else here is Parse boilerplate)
             self.registerSubclass()
+            
+            //Create empty cache
+            Post.imageCache = NSCacheSwift<String, UIImage>()
         }
     }
     //init() and initialize() are pure boilerplate: copy these into any custom Parse class you make
@@ -52,6 +59,9 @@ class Post: PFObject, PFSubclassing {
         }
         
         imageFile.saveInBackgroundWithBlock { (success: Bool, error: NSError?) -> Void in
+            if let error = error {
+                ErrorHandling.defaultErrorHandler(error)
+            }
             UIApplication.sharedApplication().endBackgroundTask(self.photoUploadTask!)
         }
         //End boilerplate code
@@ -59,20 +69,31 @@ class Post: PFObject, PFSubclassing {
         //PFUser.currentUser() allows us to access the user currently logged in
         user = PFUser.currentUser()
         self.imageFile = imageFile
-        saveInBackgroundWithBlock(nil)
+        saveInBackgroundWithBlock(ErrorHandling.errorHandlingCallback)
     }
     
     func downloadImage() {
+        //Attempt to retrieve image from cache (like a dictionary!). In the example var x = dictionary["LA"], x will either be nil or a string value. 
+        //If the image IS retrieved from cache, it will not be nil, and the entire download will be skipped
+        image.value = Post.imageCache[self.imageFile!.name]
+        
         // if image is not downloaded yet, get it
         if (image.value == nil) {
             
             //Start download (in background this time!!)
             imageFile?.getDataInBackgroundWithBlock { (data: NSData?, error: NSError?) -> Void in
+                if let error = error {
+                    ErrorHandling.defaultErrorHandler(error)
+                }
+                
                 if let data = data {
                     let image = UIImage(data: data, scale:1.0)!
                     
                     //Download complete, update image
                     self.image.value = image
+                    
+                    //Add image to cache... dictionaryName[key] = value
+                    Post.imageCache[self.imageFile!.name] = image
                 }
             }
         }
@@ -87,6 +108,9 @@ class Post: PFObject, PFSubclassing {
         
         //Fetch likes
         ParseHelper.likesForPost(self, completionBlock: { (var likes: [AnyObject]?, error: NSError?) -> Void in
+            if let error = error {
+                ErrorHandling.defaultErrorHandler(error)
+            }
             
             //filter takes in a closure, returns subset of array s.t. all elements meet requirement in closure
             //closure gets called for each element in array, passing current element each time
