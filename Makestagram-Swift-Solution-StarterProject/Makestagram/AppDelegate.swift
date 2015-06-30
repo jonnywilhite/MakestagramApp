@@ -22,7 +22,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     Parse.setApplicationId("9HLu67Nb3Z1Xyohgv4ycaRxjxYFDJDwzfaJLV5nG", clientKey: "ANMGXyLnYXHYV8kNa5Y3noDkqQeLwpxOBu70M26K")
     
     //PFUser is the default class for User objects
-    PFUser.logInWithUsername("Test", password: "test")
+    PFUser.logInWithUsername("Dummy User 2", password: "test")
     if let user = PFUser.currentUser() {
         println("Sucessful login")
     } else {
